@@ -166,9 +166,13 @@ static void __time_critical_func(tmsUpdateMode)(VrEmuTms9918* tms9918)
   {
     tms9918->mode = TMS_MODE_GRAPHICS_II;
   }
-  else if (tms9918->registers[TMS_REG_0] & TMS_R0_MODE_TEXT_80)
+  else if ((tms9918->registers[TMS_REG_0] & TMS_R0_MODE_TEXT_80) && (tms9918->registers[TMS_REG_0] & TMS_R0_MODE_TEXT_80_8) == 0)
   {
     tms9918->mode = TMS_MODE_TEXT80;
+  }
+  else if ((tms9918->registers[TMS_REG_0] & TMS_R0_MODE_TEXT_80) && (tms9918->registers[TMS_REG_0] & TMS_R0_MODE_TEXT_80_8) != 0)
+  {
+    tms9918->mode = TMS_MODE_TEXT80_8;
   }
   else
   {
@@ -390,7 +394,7 @@ static bool doubledInit = false;
  * ----------------------------------------
  * Output Sprites to a scanline
  */
-static uint8_t __time_critical_func(vrEmuTms9918OutputSprites)(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X])
+static uint8_t __time_critical_func(vrEmuTms9918OutputSprites)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
   const bool spriteMag = tms9918->spriteMag;
   const uint8_t spriteSize = tms9918->spriteSize;
@@ -547,7 +551,7 @@ static uint8_t __time_critical_func(vrEmuTms9918OutputSprites)(VR_EMU_INST_ARG u
  * ----------------------------------------
  * generate a Text mode scanline
  */
-static void __time_critical_func(vrEmuTms9918TextScanLine)(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X])
+static void __time_critical_func(vrEmuTms9918TextScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
   const uint8_t tileY = y >> 3;   /* which name table row (0 - 23) */
   const uint8_t pattRow = y & 0x07;  /* which pattern row (0 - 7) */
@@ -585,7 +589,7 @@ static void __time_critical_func(vrEmuTms9918TextScanLine)(VR_EMU_INST_ARG uint8
  * ----------------------------------------
  * generate an 80-column text mode scanline
  */
-static void __time_critical_func(vrEmuTms9918Text80ScanLine)(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X])
+static void __time_critical_func(vrEmuTms9918Text80ScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
   const uint8_t tileY = y >> 3;   /* which name table row (0 - 23) */
   const uint8_t pattRow = y & 0x07;  /* which pattern row (0 - 7) */
@@ -627,11 +631,50 @@ static void __time_critical_func(vrEmuTms9918Text80ScanLine)(VR_EMU_INST_ARG uin
   tmsMemset(pixPtr, bgFgColor[0], TEXT_PADDING_PX);
 }
 
+/* Function:  vrEmuTms9918Text80_8ScanLine
+ * ----------------------------------------
+ * generate an 80-column 8 pixel wide text mode scanline
+ */
+static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
+{
+  const uint8_t tileY = y >> 4;   /* which name table row (0 - 23) */
+  const uint8_t pattRow = y & 0x0f;  /* which pattern row (0 - 15) */
+
+  /* address in name table at the start of this row */
+
+  // Register 0x0A for text80 name table
+
+  uint8_t* rowNamesTable = tms9918->vram + (tmsNameTableAddr(tms9918) & (0x0c << 10)) + tileY * TEXT80_NUM_COLS;
+  const uint8_t* patternTable = tms9918->vram + tms9918->patternTableAddr + pattRow;
+
+  const vrEmuTms9918Color bgColor = tmsMainBgColor(tms9918);
+  const vrEmuTms9918Color fgColor = tmsMainFgColor(tms9918);
+
+  const uint8_t bgFgColor[4] =
+  {
+    (bgColor << 4) | bgColor,
+    (bgColor << 4) | fgColor,
+    (fgColor << 4) | bgColor,
+    (fgColor << 4) | fgColor
+  };
+
+  uint8_t* pixPtr = pixels;
+
+  for (uint8_t tileX = 0; tileX < 60/* TEXT80_NUM_COLS */; ++tileX)
+  {
+    uint8_t pattByte = patternTable[(*rowNamesTable++) * 16];
+    for (int8_t pattBit = 6; pattBit >= 0; pattBit -= 2)
+    {
+      *pixPtr++ = bgFgColor[(pattByte >> pattBit) & 0x03];
+    }
+  }
+}
+
 /* Function:  vrEmuTms9918GraphicsIScanLine
  * ----------------------------------------
  * generate a Graphics I mode scanline
  */
-static void __time_critical_func(vrEmuTms9918GraphicsIScanLine)(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X])
+static void __time_critical_func(vrEmuTms9918GraphicsIScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
   const uint8_t tileY = y >> 3;   /* which name table row (0 - 23) */
   const uint8_t pattRow = y & 0x07;  /* which pattern row (0 - 7) */
@@ -667,7 +710,7 @@ static void __time_critical_func(vrEmuTms9918GraphicsIScanLine)(VR_EMU_INST_ARG 
  * ----------------------------------------
  * generate a Graphics II mode scanline
  */
-static  __attribute__((noinline))  void __time_critical_func(vrEmuTms9918GraphicsIIScanLine)(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X])
+static  __attribute__((noinline))  void __time_critical_func(vrEmuTms9918GraphicsIIScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
   const uint8_t tileY = y >> 3;   /* which name table row (0 - 23) */
   const uint8_t pattRow = y & 0x07;  /* which pattern row (0 - 7) */
@@ -718,7 +761,7 @@ static  __attribute__((noinline))  void __time_critical_func(vrEmuTms9918Graphic
  * ----------------------------------------
  * generate a Multicolor mode scanline
  */
-static void __time_critical_func(vrEmuTms9918MulticolorScanLine)(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X])
+static void __time_critical_func(vrEmuTms9918MulticolorScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
   const uint8_t tileY = y >> 3;
   const uint8_t pattRow = ((y >> 2) & 0x01) + (tileY & 0x03) * 2;
@@ -748,11 +791,11 @@ static void __time_critical_func(vrEmuTms9918MulticolorScanLine)(VR_EMU_INST_ARG
  * ----------------------------------------
  * generate a scanline
  */
-VR_EMU_TMS9918_DLLEXPORT uint8_t __time_critical_func(vrEmuTms9918ScanLine)(VR_EMU_INST_ARG uint8_t y, uint8_t pixels[TMS9918_PIXELS_X])
+VR_EMU_TMS9918_DLLEXPORT uint8_t __time_critical_func(vrEmuTms9918ScanLine)(VR_EMU_INST_ARG uint16_t y, uint8_t pixels[320])
 {
   uint8_t tempStatus = 0;
 
-  if (!tms9918->displayEnabled || y >= TMS9918_PIXELS_Y)
+  if (!tms9918->displayEnabled || (tms9918->mode == TMS_R0_MODE_TEXT_80_8 ? y >= 384 : y >= TMS9918_PIXELS_Y))
   {
     tmsMemset(pixels, tmsMainBgColor(tms9918), TMS9918_PIXELS_X);
   }
@@ -779,8 +822,11 @@ VR_EMU_TMS9918_DLLEXPORT uint8_t __time_critical_func(vrEmuTms9918ScanLine)(VR_E
         tempStatus = vrEmuTms9918OutputSprites(VR_EMU_INST y, pixels);
         break;
 
-      case TMS_R0_MODE_TEXT_80:
+      case TMS_MODE_TEXT80:
         vrEmuTms9918Text80ScanLine(VR_EMU_INST y, pixels);
+        break;
+      case TMS_MODE_TEXT80_8:
+        vrEmuTms9918Text80_8ScanLine(VR_EMU_INST y, pixels);
         break;
     }
   }
