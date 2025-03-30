@@ -40,6 +40,7 @@
 #define STATUS_5S               0x40
 #define STATUS_COL              0x20
 
+#define TMS_R0_MODE_TEXT_80_8   0x80
 #define TMS_R0_MODE_TEXT_80     0x04
 #define TMS_R0_MODE_GRAPHICS_II 0x02
 #define TMS_R0_EXT_VDP_ENABLE   0x01
@@ -224,3 +225,5 @@ void vrEmuTms9918SetStatusImpl(VR_EMU_INST_ARG uint8_t status)
 {
   tms9918->status = status;
 }
+
+#define BGR12PALETTE
