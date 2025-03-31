@@ -675,7 +675,7 @@ static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG u
     bColorChanged = true;
     lastColor = bgFgColor[1];
   }
-  if (false  && bColorChanged)
+  if (bColorChanged)
   {
     for (uint16_t i = 0; i < 256; ++i)
     {
@@ -711,7 +711,7 @@ static void __time_critical_func(vrEmuTms9918Text80_8ScanLine)(VR_EMU_INST_ARG u
   }
 #else
   uint32_t* pixPtr = (uint32_t*)pixels;
-  for (uint8_t tileX = 0; tileX < 30 /*TEXT80_NUM_COLS*/; ++tileX)
+  for (uint8_t tileX = 0; tileX < TEXT80_NUM_COLS; ++tileX)
   {
     uint8_t pattByte = patternTable[((uint)(*rowNamesTable++)) << 4];
     int32_t* pCollArr = bgr12ColArr[pattByte];
