@@ -73,7 +73,7 @@ static inline bool tmsSpriteMag(VrEmuTms9918* tms9918)
  */
 static inline uint16_t tmsNameTableAddr(VrEmuTms9918* tms9918)
 {
-  return (tms9918->registers[TMS_REG_NAME_TABLE] & 0x0f) << 10;
+  return (tms9918->registers[TMS_REG_NAME_TABLE] & 0x0C) << 10;
 }
 
 /* Function:  tmsColorTableAddr
@@ -897,7 +897,7 @@ uint8_t __time_critical_func(vrEmuTms9918RegValue)(VR_EMU_INST_ARG vrEmuTms9918R
 
 /* Function:  vrEmuTms9918WriteRegValue
  * ----------------------------------------
- * write a reigister value
+ * write a register value
  */
 VR_EMU_TMS9918_DLLEXPORT
 void vrEmuTms9918WriteRegValue(VR_EMU_INST_ARG vrEmuTms9918Register reg, uint8_t value)
