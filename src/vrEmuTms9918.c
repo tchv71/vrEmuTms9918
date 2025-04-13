@@ -273,7 +273,7 @@ VR_EMU_TMS9918_DLLEXPORT void __time_critical_func(vrEmuTms9918Reset)(VR_EMU_INS
   tms9918->readAheadBuffer = 0;
 
   vdpRegisterReset(tms9918);
-  TMS_REGISTER(tms9918, 0x01) = 0x40; // turn display off
+  TMS_REGISTER(tms9918, 0x01) = 0x00; // turn display off
   TMS_REGISTER(tms9918, 0x07) = 0x00;
   tmsCachedMode = TMS_MODE_GRAPHICS_I;
 
@@ -1048,7 +1048,7 @@ static void __time_critical_func(vrEmuTms9918Text80ScanLine)(VR_EMU_INST_ARG uin
   uint8_t pattRow = y & 0x07;  /* which pattern row (0 - 7) */
 
 
-  uint8_t nameTableMask = tms9918->isUnlocked ? 0x0f : 0xc0;  
+  uint8_t nameTableMask = tms9918->isUnlocked ? 0x0f : 0x0c;  
 
   /* address in name table at the start of this row */
   uint32_t rowNamesAddr = (tmsNameTableAddr(tms9918) & (nameTableMask << 10)) + tileY * TEXT80_NUM_COLS;
@@ -2155,15 +2155,21 @@ void __time_critical_func(vrEmuTms9918WriteRegValue)(VR_EMU_INST_ARG vrEmuTms991
     {
       tms9918->restart = 1;
     }
-    else if ((regIndex == 0x3F) && (value & 1)) // firmware update
+    else if ((regIndex == 0x3F) && (value & 0x80)) // firmware update
     {
       // b7      : 0 = idle:   1 = execute
       // b6      : 0 = verify: 1 = write
       // b5 - b0 : address to read firmware data (256 byte boundaries)
       //           reads one UF2 frame (512 bytes)
-
       if (TMS_REGISTER(tms9918, 0x38) == 0)
+      {
+        TMS_STATUS(tms9918, 2) = 0x80; // set gpu processing flag
         tms9918->flash = 1;
+      }
+      else
+      {
+        TMS_STATUS(tms9918, 2) = 0x14; // error - busy
+      }
     }
     else if (regIndex == 0x1e && value == 0)
     {
@@ -2176,7 +2182,7 @@ void __time_critical_func(vrEmuTms9918WriteRegValue)(VR_EMU_INST_ARG vrEmuTms991
     else if (regIndex == 0x0F)
     {
       uint8_t statReg = (value & 0x0f);
-      TMS_STATUS(tms9918, 0x0F) = statReg;
+      TMS_STATUS(tms9918, 0x0F) = statReg;  // is this right? or should this be the read-ahead value?
       if (value & 0x40) tms9918->startTime = time_us_32();    // reset
       if (value & 0x20) tms9918->currentTime = time_us_32();  // snap      
       else if (value & 0x10) tms9918->startTime += (tms9918->stopTime - tms9918->startTime);
