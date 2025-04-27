@@ -269,7 +269,7 @@ VR_EMU_TMS9918_DLLEXPORT void __time_critical_func(vrEmuTms9918Reset)(VR_EMU_INS
   memset(&TMS_STATUS(tms9918, 0), 0, TMS_STATUS_REGISTERS);
   TMS_STATUS(tms9918, 0) = 0x1f;
   TMS_STATUS(tms9918, 1) = 0xE8;  // ID = F18A (0xE0) set 0x08 for anyone who cares it's not a real one
-  TMS_STATUS(tms9918, 14) = 0x10; // Version
+  TMS_STATUS(tms9918, 14) = 0x1A; // Version
   tms9918->readAheadBuffer = 0;
 
   vdpRegisterReset(tms9918);
