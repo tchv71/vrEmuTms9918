@@ -574,9 +574,10 @@ void initLookups()
 static inline void loadSpriteData(uint32_t *spriteBits, uint32_t pattOffset, uint32_t *pattMask, const uint32_t ecm, const uint32_t ecmOffset, const bool flipX, const bool sprite16)
 {
   int i = 0;
+  uint32_t patt;
   do  // do-while since behavior for ecm=0 and ecm==1 is the same
   {
-    uint32_t patt = tms9918->vram.bytes[pattOffset];
+    patt = tms9918->vram.bytes[pattOffset];
     if (flipX) patt = reversedBits[patt];
     spriteBits[i] = patt << ((flipX && sprite16) ? 16 : 24);
     if (sprite16)
@@ -829,17 +830,23 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
 
               uint8_t *p = pixels + xPos;
 
-              if (chunkMask & 0x80) p[0] = color & 0x3f;
-              if (chunkMask & 0x40) p[1] = color & 0x3f;
+              if (chunkMask & 0x80) p[0] = color;
+              if (chunkMask & 0x40) p[1] = color;
               color >>= 8;
-              if (chunkMask & 0x20) p[2] = color & 0x3f;
-              if (chunkMask & 0x10) p[3] = color & 0x3f;
+              if (chunkMask & 0x20) p[2] = color;
+              if (chunkMask & 0x10) p[3] = color;
               color >>= 8;
-              if (chunkMask & 0x8) p[4] = color & 0x3f;
-              if (chunkMask & 0x4) p[5] = color & 0x3f;
+              if (chunkMask & 0x8) p[4] = color;
+              if (chunkMask & 0x4) p[5] = color;
               color >>= 8;
-              if (chunkMask & 0x2) p[6] = color & 0x3f;
-              if (chunkMask & 0x1) p[7] = color & 0x3f;
+              if (chunkMask & 0x2) p[6] = color;
+              if (chunkMask & 0x1) p[7] = color;
+            }
+            else
+            {
+              spriteBits[2] <<= 4;
+              spriteBits[1] <<= 4;
+              spriteBits[0] <<= 4;
             }
             validPixels <<= 8;
             xPos += 8;
