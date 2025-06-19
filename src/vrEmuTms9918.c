@@ -639,8 +639,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
        sometimes have all sprites enabled with all zeros and that hurts us :( */
     if (*(uint32_t*)spriteAttr == 0)
     {
-      spriteAttr += SPRITE_ATTR_BYTES;
-      continue;
+      break;
     }
 
     int32_t yPos = spriteAttr[SPRITE_ATTR_Y];
@@ -659,6 +658,12 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
       yPos -= 256;
 
     int32_t pattRow = y - yPos;
+    if (pattRow < 0)
+    {
+      spriteAttr += SPRITE_ATTR_BYTES;
+      continue;
+    }
+
     pattRow >>= spriteMag;  // this needs to be a shift because -1 / 2 becomes 0. Bad.
 
     uint8_t thisSpriteSize = spriteSize;
@@ -675,7 +680,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
     }
 
     /* check if sprite is visible on this line */
-    if (pattRow < 0 || pattRow >= thisSpriteSize)
+    if (pattRow >= thisSpriteSize)
     {
       spriteAttr += SPRITE_ATTR_BYTES;
       continue;
@@ -801,7 +806,10 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
               to improve performance for each case (reduce branches in loops) */
         uint32_t quadPal = repeatedPalette[spriteColor];
 
-        if (spriteMag)
+        bool singlePix = spriteMag && thisSprite16;
+
+         // 16px magnified is separate because it's harder. we only have 32 bits to play with, so to word align it, we need to go to 64 bits
+        if (singlePix)
         {
           register uint32_t sb0 = spriteBits[0];
           register uint32_t sb1 = spriteBits[1];
@@ -809,7 +817,6 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
 
           while (validPixels)
           {
-            //uint32_t invOffset = 32 - offset;
             /* output the sprite pixels 8 at a time (4x magnified pixels) */
             uint32_t chunkMask = validPixels >> 24;
             if (chunkMask)
@@ -830,7 +837,6 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
               uint32_t color = ecmLookup[ecmIndex] | quadPal;
 
               uint8_t *p = pixels + xPos;
-
               if (chunkMask & 0x80) p[0] = color;
               if (chunkMask & 0x40) p[1] = color;
               color >>= 8;
@@ -850,12 +856,22 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
             xPos += 8;
           }
         }
-        else  // regular ecm sprite (8 or 16px, non-magnified)
+        else  // regular ecm sprite (8 or 16px, non-magnified) or 8px magnified
         {
+          if (spriteMag)
+          {
+            spriteBits[2] = doubledBits[spriteBits[2] >> 24] << 16;
+            spriteBits[1] = doubledBits[spriteBits[1] >> 24] << 16;
+            spriteBits[0] = doubledBits[spriteBits[0] >> 24] << 16;
+          }
+
           // get him to be word aligned so we can smash out 4 pixels at a time
           uint32_t quadOffset = xPos >> 2;
           const uint32_t pixOffset = xPos & 0x3;
           validPixels >>= pixOffset;
+          spriteBits[2] >>= pixOffset;
+          spriteBits[1] >>= pixOffset;
+          spriteBits[0] >>= pixOffset;
 
           uint32_t *quadPixels = (uint32_t*)pixels;
 
