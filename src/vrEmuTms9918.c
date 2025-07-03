@@ -606,20 +606,21 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
   const uint8_t spriteSizePx = spriteSize << spriteMag;
   const uint16_t spriteAttrTableAddr = tmsSpriteAttrTableAddr(tms9918);
   const uint16_t spritePatternAddr = tmsSpritePatternTableAddr(tms9918);
-  const bool row30Mode = TMS_REGISTER(tms9918, 0x31) & 0x40;
+  const bool row30Mode = tms9918->isUnlocked && (TMS_REGISTER(tms9918, 0x31) & 0x40);
   const uint32_t maxY = row30Mode ? 0xf0 : 0xe0;
 
   uint32_t spritesShown = 0;
   uint8_t tempStatus = 0x1f;
   uint32_t transparentCount = 0;
 
-  // ecm settings
-  const uint32_t ecm = (TMS_REGISTER(tms9918, 0x31) & 0x03);
+  // ecm settings  
+  const uint32_t ecm = tms9918->isUnlocked ? (TMS_REGISTER(tms9918, 0x31) & 0x03) : 0;
   const uint32_t ecmColorOffset = (ecm == 3) ? 2 : ecm;
   const uint32_t ecmColorMask = (ecm == 3) ? 0x0e : 0x0f;
   const uint32_t ecmOffset = 0x800 >> ((TMS_REGISTER(tms9918, 0x1d) & 0xc0) >> 6);
 
-  uint8_t pal = TMS_REGISTER(tms9918, 0x18) & 0x30;
+  uint8_t pal = 0;
+  if (tms9918->isUnlocked) pal = TMS_REGISTER(tms9918, 0x18) & 0x30;
   if (ecm == 1)
   {
     pal &= 0x20;
@@ -672,8 +673,10 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
     bool thisSprite16 = sprite16;
     uint8_t thisSpriteIdxMask = spriteIdxMask;
     uint8_t thisSpriteSizePx = spriteSizePx;
+    uint8_t spriteAttrColor = spriteAttr[SPRITE_ATTR_COLOR];
+    if (!tms9918->isUnlocked) spriteAttrColor &= 0xf;
 
-    if (!sprite16 && (spriteAttr[SPRITE_ATTR_COLOR] & 0x10))
+    if (!sprite16 && (spriteAttrColor & 0x10))
     {
       thisSpriteSize = 16;
       thisSprite16 = true;
@@ -702,7 +705,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
         break;
     }
 
-    const int32_t earlyClockOffset = (spriteAttr[SPRITE_ATTR_COLOR] & 0x80) ? -32 : 0;
+    const int32_t earlyClockOffset = (spriteAttrColor & 0x80) ? -32 : 0;
     int32_t xPos = (int32_t)(spriteAttr[SPRITE_ATTR_X]) + earlyClockOffset;
     if ((xPos > TMS9918_PIXELS_X) || (-xPos > thisSpriteSizePx))
     {
@@ -710,10 +713,10 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
       continue;
     }
 
-    if (spriteAttr[SPRITE_ATTR_COLOR] & 0x20) pattRow = thisSpriteSize - pattRow; // flip Y?
+    if (spriteAttrColor & 0x20) pattRow = thisSpriteSize - pattRow; // flip Y?
 
     /* sprite is visible on this line */
-    uint8_t spriteColor = (spriteAttr[SPRITE_ATTR_COLOR] & ecmColorMask) << ecmColorOffset;
+    uint8_t spriteColor = (spriteAttrColor & ecmColorMask) << ecmColorOffset;
     const uint8_t pattIdx = spriteAttr[SPRITE_ATTR_NAME] & thisSpriteIdxMask;
     uint16_t pattOffset = spritePatternAddr + pattIdx * PATTERN_BYTES + (uint16_t)pattRow;
 
@@ -724,7 +727,7 @@ static inline uint8_t __time_critical_func(renderSprites)(VR_EMU_INST_ARG uint8_
      */
     uint32_t pattMask = 0;
     uint32_t spriteBits[3] = {0}; // a 32-bit value for each ecm bit plane (also pushed far left)
-    const bool flipX = spriteAttr[SPRITE_ATTR_COLOR] & 0x40;
+    const bool flipX = spriteAttrColor & 0x40;
 
     if (flipX)
       if (thisSprite16)
