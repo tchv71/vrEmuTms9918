@@ -73,7 +73,7 @@ static inline bool tmsSpriteMag(VrEmuTms9918* tms9918)
  */
 static inline uint16_t tmsNameTableAddr(VrEmuTms9918* tms9918)
 {
-  return (tms9918->registers[TMS_REG_NAME_TABLE] & 0x0C) << 10;
+  return (tms9918->registers[TMS_REG_NAME_TABLE] & 0x0F) << 10;
 }
 
 /* Function:  tmsColorTableAddr
@@ -337,7 +337,7 @@ VR_EMU_TMS9918_DLLEXPORT bool __time_critical_func(vrEmuTms9918InterruptStatus)(
  */
 VR_EMU_TMS9918_DLLEXPORT void __time_critical_func(vrEmuTms9918InterruptSet)(VR_EMU_INST_ONLY_ARG)
 {
-  vrEmuTms9918InterruptSet(VR_EMU_INST_ONLY);
+  vrEmuTms9918InterruptSetImpl(VR_EMU_INST_ONLY);
 }
 
 /* Function:  vrEmuTms9918SetStatus
