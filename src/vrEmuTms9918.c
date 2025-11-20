@@ -846,7 +846,7 @@ VR_EMU_TMS9918_DLLEXPORT uint8_t __time_critical_func(vrEmuTms9918ScanLine)(VR_E
 {
   uint8_t tempStatus = 0;
 
-  if (!tms9918->displayEnabled || y >= (tms9918->mode == TMS_MODE_TEXT80_8 ? 384 : TMS9918_PIXELS_Y))
+  if (!tms9918->displayEnabled || y >= (tms9918->mode == TMS_MODE_TEXT80_8 ? TMS9918_80_PIXELS_Y/* 384 */ : TMS9918_PIXELS_Y))
   {
     tmsMemset(pixels, tmsMainBgColor(tms9918), TMS9918_PIXELS_X);
   }

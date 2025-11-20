@@ -117,6 +117,7 @@ typedef enum
 
 #define TMS9918_PIXELS_X 256
 #define TMS9918_PIXELS_Y 192
+#define TMS9918_80_PIXELS_Y 480
 
 
 /* PUBLIC INTERFACE
